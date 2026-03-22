@@ -294,23 +294,7 @@ const Cart = () => {
         return;
       }
 
-      // const options = {
-      //   key: data.razorpayKeyId,
-      //   amount: Math.round(data.amount * 100),
-      //   currency: data.currency,
-      //   name: "Kumar Visuals Studio",
-      //   description: "Music purchase",
-      //   order_id: data.razorpayOrderId,
-      //   // Passing the ID explicitly from the scope
-      //   handler: (response: any) =>
-      //     handlePaymentVerification(data.orderId, response),
-      //   ...(Object.keys(buildPrefill()).length
-      //     ? { prefill: buildPrefill() }
-      //     : {}),
-      //   theme: { color: "#7C3AED" },
-      // };
-
-      const options = {
+const options = {
   key: data.razorpayKeyId,
   amount: Math.round(data.amount * 100),
   currency: data.currency,
@@ -341,7 +325,6 @@ const Cart = () => {
 
   theme: { color: "#7C3AED" },
 };
-
       const rzp = new globalThis.Razorpay(options);
       
       // Handle failures/closure
