@@ -32,10 +32,15 @@ interface CategoryCarouselProps {
 const CategoryCarousel: FC<CategoryCarouselProps> = ({ title, items }) => {
   const sectionRef = useRef<HTMLDivElement | null>(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-50px" });
+
   const [api, setApi] = useState<CarouselApi | undefined>(undefined);
 
   const autoplayPlugin = useRef(
-    Autoplay({ delay: 3500, stopOnInteraction: true })
+    Autoplay({
+      delay: 3500,
+      stopOnInteraction: true,
+      stopOnMouseEnter: true
+    })
   );
 
   const scrollPrev = () => api?.scrollPrev();
@@ -53,7 +58,6 @@ const CategoryCarousel: FC<CategoryCarouselProps> = ({ title, items }) => {
       transition={{ duration: 0.6 }}
       className="mb-12 md:mb-24 px-1"
     >
-      {/* SECTION HEADER */}
       <div className="flex items-center justify-between gap-4 mb-6 md:mb-8 pb-4 border-b border-border/40">
         <div className="space-y-1">
           <div className="flex items-center gap-2 md:gap-2.5">
@@ -80,6 +84,7 @@ const CategoryCarousel: FC<CategoryCarouselProps> = ({ title, items }) => {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
+
             <Button
               variant="outline"
               size="icon"
@@ -93,7 +98,6 @@ const CategoryCarousel: FC<CategoryCarouselProps> = ({ title, items }) => {
         )}
       </div>
 
-      {/* CAROUSEL CONTENT */}
       <Carousel
         setApi={setApi}
         opts={{
@@ -103,23 +107,20 @@ const CategoryCarousel: FC<CategoryCarouselProps> = ({ title, items }) => {
         }}
         plugins={hasMultipleItems ? [autoplayPlugin.current] : []}
         className="w-full"
-        onMouseEnter={() => hasMultipleItems && autoplayPlugin.current.stop()}
-        onMouseLeave={() => hasMultipleItems && autoplayPlugin.current.play()}
       >
         <CarouselContent className="-ml-3 md:-ml-4">
           {items.map((item, idx) => (
             <CarouselItem
               key={item.id}
-              // Basis breakdown: 
-              // Mobile: 85% (peek effect)
-              // Tablet: 50% (2 cards)
-              // Desktop: 33% (3 cards)
-              // Large Desktop: 25% (4 cards)
               className="pl-3 md:pl-4 basis-[82%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4"
             >
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
-                animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+                animate={
+                  isInView
+                    ? { opacity: 1, scale: 1 }
+                    : { opacity: 0, scale: 0.95 }
+                }
                 transition={{ duration: 0.4, delay: idx * 0.03 }}
               >
                 <MusicCard {...item} />
