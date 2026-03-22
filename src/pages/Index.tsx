@@ -7,7 +7,6 @@ import Navigation from "@/components/Navigation";
 import Hero from "@/components/Hero";
 import CategoryCarousel from "@/components/CategoryCarousel";
 import TestimonialCarousel from "@/components/TestimonialCarousel";
-import VisitorCounter from "@/components/VisitorCounter";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,8 +20,6 @@ import api from "@/services/api";
 import { SectionLoader } from "@/components/ui/loader";
 import { SeoHead } from "@/components/SeoHead";
 
-/** * Type Definitions 
- */
 type ApiFile = {
   key: string;
   filename?: string;
@@ -42,7 +39,7 @@ type ApiProduct = {
   averageRating?: number;
   createdAt?: string;
   isNewTag?: boolean;
-  category?: string;
+  category?: any;
   files?: ApiFile[];
 };
 
@@ -106,9 +103,6 @@ type HomePageSettings = {
   whyChooseHeader?: SectionHeader;
 };
 
-/**
- * Premium Page Loader Component
- */
 const PageLoader = ({ title }: { title?: string }) => {
   const displayTitle = title || "Kumar Visuals";
 
@@ -171,7 +165,6 @@ const PageLoader = ({ title }: { title?: string }) => {
 const Index = () => {
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; title: string } | null>(null);
 
-  // Fetch Homepage Data
   const { data: homeSettings, isLoading: homeLoading, isError: homeError, error: homeErrorObj } = useQuery<HomePageSettings, Error>({
     queryKey: ["homepage-settings"],
     queryFn: async () => {
@@ -180,7 +173,6 @@ const Index = () => {
     },
   });
 
-  // Fetch Products Data
   const { data: allProductsData, isLoading: productsLoading, isError: productsErrorFlag, error: productsErrorObj } = useQuery<ApiProduct[], Error>({
     queryKey: ["home-products"],
     queryFn: async () => {
@@ -195,12 +187,22 @@ const Index = () => {
   const isInitialLoading = (homeLoading && !homeSettings) || (productsLoading && !allProductsData);
   const brandTitle = homeSettings?.hero?.title ?? "Kumar Visuals";
 
-  // Data Mapping Helpers
   const mapToCarouselItem = (p: ApiProduct): CarouselItem => {
-    const previewUrl = p.previewAudio?.url;
-    const isVideo = new RegExp(/\.(mp4|webm|ogg|mov)$/i).exec(previewUrl) || p.thumbnail?.contentType?.includes("video");
+    const previewUrl = p.previewAudio?.url || "";
+    const isVideo =
+      !!previewUrl &&
+      (/\.(mp4|webm|ogg|mov)$/i.test(previewUrl) ||
+        (p.thumbnail?.contentType
+          ? p.thumbnail.contentType.includes("video")
+          : false));
+
     const fallbackCovers = [album1, album2, album3, album4];
-    const cover = p.thumbnail?.url || fallbackCovers[Math.abs(p._id?.codePointAt(0) || 0) % fallbackCovers.length];
+
+    const cover =
+      p.thumbnail?.url ||
+      fallbackCovers[
+        Math.abs((p._id || "0").charCodeAt(0)) % fallbackCovers.length
+      ];
 
     return {
       id: p._id,
@@ -212,7 +214,14 @@ const Index = () => {
       rating: p.averageRating ?? undefined,
       audioPreview: isVideo ? undefined : previewUrl,
       videoPreview: isVideo ? previewUrl : undefined,
-      onPlayClick: isVideo && previewUrl ? () => setSelectedVideo({ url: previewUrl, title: p.title }) : undefined,
+      onPlayClick:
+        isVideo && previewUrl
+          ? () =>
+              setSelectedVideo({
+                url: previewUrl,
+                title: p.title,
+              })
+          : undefined,
     };
   };
 
@@ -225,8 +234,13 @@ const Index = () => {
     for (const cat of activeCategories) {
       if (!cat.slug) continue;
       const productsForCat = allProducts
-        .filter((p) => p.category === cat.slug)
-        .sort((a, b) => (new Date(b.createdAt || 0).getTime()) - (new Date(a.createdAt || 0).getTime()));
+        .filter(
+          (p) =>
+            (typeof p.category === "string" && p.category === cat.slug) ||
+            (typeof p.category === "object" &&
+              (p.category as any)?.slug === cat.slug)
+        )
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
       map[cat.slug] = productsForCat.map(mapToCarouselItem);
     }
     return map;
@@ -266,7 +280,6 @@ const Index = () => {
   const currencyLabel = megaBundle?.currency === "INR" || !megaBundle?.currency ? "₹" : megaBundle.currency;
   const releaseDateLabel = megaBundle?.releaseDate ? new Date(megaBundle.releaseDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "";
 
-  // Component Logic for Sections
   const productSectionContent = productsLoading ? (
     <SectionLoader label="Syncing latest releases..." />
   ) : allProducts.length === 0 ? (
@@ -281,12 +294,10 @@ const Index = () => {
   );
 
   return (
-    
     <div className="min-h-screen bg-[#fafafa] dark:bg-background relative overflow-x-hidden">
       <SeoHead />
       {isInitialLoading && <PageLoader title={brandTitle} />}
 
-      <VisitorCounter pageId="home" />
       <Navigation />
 
       {!homeSettings && homeLoading ? (
@@ -296,7 +307,6 @@ const Index = () => {
       )}
 
       <main className="space-y-16 md:space-y-32 pb-16 md:pb-24">
-        {/* Main Product Lists */}
         <section className="container mx-auto px-4 pt-6 md:pt-10">
           {(homepageError || productsError) && (
             <p className="text-xs md:text-sm text-red-500 text-center mb-6 font-bold">
@@ -306,7 +316,6 @@ const Index = () => {
           {productSectionContent}
         </section>
 
-        {/* Mega Bundle CTA Section */}
         {megaBundle?.isEnabled && (
           <section className="container mx-auto px-4 max-w-7xl">
             <motion.div
@@ -336,7 +345,7 @@ const Index = () => {
                     <div className="text-3xl md:text-4xl font-black text-primary italic">
                       {currencyLabel}{megaBundle.price}
                     </div>
-                    {!!(megaBundle.originalPrice) && (
+                    {!!megaBundle.originalPrice && (
                       <div className="text-xs md:text-sm text-muted-foreground/40 line-through font-bold">
                         {currencyLabel}{megaBundle.originalPrice}
                       </div>
@@ -360,7 +369,6 @@ const Index = () => {
           </section>
         )}
 
-        {/* Why Choose Section */}
         {homeSettings?.whyChooseEnabled && featureCards.length > 0 && (
           <section className="container mx-auto px-4 max-w-7xl">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 md:mb-16">
@@ -385,13 +393,11 @@ const Index = () => {
           </section>
         )}
 
-        {/* Testimonials Section */}
         {homeSettings?.testimonialsEnabled && testimonialItems.length > 0 && (
           <TestimonialCarousel testimonials={testimonialItems} header={homeSettings?.testimonialsHeader} />
         )}
       </main>
 
-      {/* Video Popup Player */}
       <Dialog open={!!selectedVideo} onOpenChange={() => setSelectedVideo(null)}>
         <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black border-none rounded-xl md:rounded-2xl shadow-2xl mx-4 sm:mx-auto">
           <DialogHeader className="absolute top-2 right-2 md:top-4 md:right-4 z-50">

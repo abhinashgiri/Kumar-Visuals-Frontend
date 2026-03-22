@@ -8,12 +8,12 @@ import { cn } from "@/lib/utils";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { useSiteSettings } from "@/store/useSiteSettings"; 
+import { useSiteSettings } from "@/store/useSiteSettings";
 
 interface MusicCardProps {
   id: string;
   title: string;
-  brandName?: string; 
+  brandName?: string;
   price: number;
   originalPrice?: number;
   coverImage?: string;
@@ -22,7 +22,7 @@ interface MusicCardProps {
   onPlayClick?: () => void;
   isNew?: boolean;
   isFeatured?: boolean;
-  isExclusive?: boolean; 
+  isExclusive?: boolean;
   releaseDate?: string;
   rating?: number;
   alreadyPurchased?: boolean;
@@ -31,7 +31,7 @@ interface MusicCardProps {
 const MusicCard = memo(({
   id,
   title,
-  brandName: customBrandName, 
+  brandName: customBrandName,
   price,
   originalPrice,
   coverImage,
@@ -39,120 +39,177 @@ const MusicCard = memo(({
   videoPreview,
   onPlayClick,
   isNew,
-  isExclusive, 
+  isExclusive,
   releaseDate,
   rating,
   alreadyPurchased = false,
 }: MusicCardProps) => {
+
   const [isHovered, setIsHovered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
-  
+
   const settings = useSiteSettings((state) => state.settings);
   const finalBrandName = customBrandName || settings?.brandName || "Kumar Visuals";
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const { addToCart, isInCart } = useCart();
   const { toast } = useToast();
+
   const inCart = isInCart(id);
 
   useEffect(() => {
-    if (!audioPreview) return;
 
-    if (audioRef.current?.src !== audioPreview) {
+    if (!audioPreview) {
       if (audioRef.current) {
-        audioRef.current.pause(); 
+        audioRef.current.pause();
+        audioRef.current = null;
       }
-      
+      setIsPlaying(false);
+      return;
+    }
+
+    if (!audioRef.current || audioRef.current.src !== audioPreview) {
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
       const audio = new Audio(audioPreview);
-      audio.preload = "auto"; 
+
+      audio.preload = "auto";
       audio.volume = 0.5;
-      audio.onended = () => setIsPlaying(false);
+
+      audio.onended = () => {
+        setIsPlaying(false);
+      };
+
       audioRef.current = audio;
     }
 
     const audio = audioRef.current;
 
+    if (!audio) return;
+
     if (isHovered) {
+
       const playPromise = audio.play();
-      
+
       if (playPromise !== undefined) {
+
         playPromise
           .then(() => {
-            if (isHovered) setIsPlaying(true);
-            else {
-                audio.pause(); 
-                audio.currentTime = 0;
+
+            if (!audioRef.current) return;
+
+            if (isHovered) {
+              setIsPlaying(true);
+            } else {
+              audio.pause();
+              audio.currentTime = 0;
             }
+
           })
-          .catch((err) => {
-            console.log("Audio playback interrupted:", err);
+          .catch(() => {
             setIsPlaying(false);
           });
+
       }
+
     } else {
-      audio.pause();
-      audio.currentTime = 0; 
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+
       setIsPlaying(false);
+
     }
 
     return () => {
-      audio.pause();
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
     };
+
   }, [isHovered, audioPreview]);
 
   const handleVideoClick = (e: React.MouseEvent) => {
+
     e.preventDefault();
     e.stopPropagation();
+
     if (videoPreview && onPlayClick) {
       onPlayClick();
     }
+
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
+
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (alreadyPurchased) return;
+
     if (inCart) {
-      toast({ title: "In Cart", description: "This track is already in your cart." });
+
+      toast({
+        title: "In Cart",
+        description: "This track is already in your cart."
+      });
+
       return;
     }
 
-    addToCart({ 
-      id, 
-      title, 
-      artist: finalBrandName, 
-      price, 
-      coverImage: coverImage || "", 
-      format: "MP3 320 Kbps" 
+    addToCart({
+      id,
+      title,
+      artist: finalBrandName,
+      price,
+      coverImage: coverImage || "",
+      format: "MP3 320 Kbps"
     });
-    
-    toast({ title: "Added to Cart", description: `${title} is ready for checkout.` });
+
+    toast({
+      title: "Added to Cart",
+      description: `${title} is ready for checkout.`
+    });
+
   };
 
   const handleToggleFavorite = (e: React.MouseEvent) => {
+
     e.preventDefault();
     e.stopPropagation();
+
     setIsFavorite(!isFavorite);
+
   };
 
   const validOriginalPrice = originalPrice || 0;
+
   const hasDiscount = validOriginalPrice > price;
+
   const discount = hasDiscount
-    ? Math.round(((validOriginalPrice - price) / validOriginalPrice) * 100) 
+    ? Math.round(((validOriginalPrice - price) / validOriginalPrice) * 100)
     : 0;
 
   return (
-    <motion.div 
-      whileHover={{ y: -5 }} 
+    <motion.div
+      whileHover={{ y: -5 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
       className="h-full"
     >
-      <Card 
+      <Card
         className={cn(
-          "group flex flex-col h-full overflow-hidden bg-white/60 backdrop-blur-2xl border-white/40 transition-all duration-500 rounded-[1.5rem]",
-          "shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] hover:border-primary/20",
+          "group flex flex-col h-full overflow-hidden transition-all duration-500 rounded-[1.5rem] border shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)]",
+          "bg-white/60 backdrop-blur-2xl border-white/40 hover:border-primary/20",
+          "dark:bg-slate-900/60 dark:border-slate-800/60 dark:shadow-none dark:hover:border-primary/30",
           isPlaying && "ring-1 ring-primary/30"
         )}
         onMouseEnter={() => setIsHovered(true)}
@@ -165,7 +222,7 @@ const MusicCard = memo(({
             aria-label={`View details for ${title}`}
             />
 
-            <div className="relative aspect-square overflow-hidden m-2.5 rounded-[1.2rem] bg-slate-100 z-10 pointer-events-none shrink-0">
+            <div className="relative aspect-square overflow-hidden m-2.5 rounded-[1.2rem] z-10 pointer-events-none shrink-0 bg-slate-100 dark:bg-slate-800">
             <motion.img 
                 animate={{ scale: isHovered ? 1.05 : 1 }} 
                 transition={{ duration: 1.2 }}
@@ -208,11 +265,12 @@ const MusicCard = memo(({
             <button 
                 onClick={handleToggleFavorite}
                 className={cn(
-                "absolute right-3 z-20 pointer-events-auto p-2 rounded-full bg-white/90 backdrop-blur-md border border-slate-100 hover:bg-white transition-all shadow-sm opacity-0 group-hover:opacity-100 translate-y-[-10px] group-hover:translate-y-0 duration-300 focus:opacity-100 focus:translate-y-0",
+                "absolute right-3 z-20 pointer-events-auto p-2 rounded-full transition-all shadow-sm opacity-0 group-hover:opacity-100 translate-y-[-10px] group-hover:translate-y-0 duration-300 focus:opacity-100 focus:translate-y-0",
+                "bg-white/90 border border-slate-100 dark:bg-slate-800/90 dark:border-slate-700",
                 isExclusive ? "top-12" : "top-3" 
                 )}
             >
-                <Heart className={cn("w-3.5 h-3.5 transition-colors", isFavorite ? "fill-rose-500 text-rose-500" : "text-slate-400")} />
+                <Heart className={cn("w-3.5 h-3.5 transition-colors", isFavorite ? "fill-rose-500 text-rose-500" : "text-slate-400 dark:text-slate-500")} />
             </button>
 
             <div className="absolute inset-0 flex items-center justify-center z-20">
@@ -228,9 +286,11 @@ const MusicCard = memo(({
                         onClick={videoPreview ? handleVideoClick : undefined} 
                         size="icon"
                         className={cn(
-                        "w-14 h-14 rounded-full p-0 bg-white/95 border border-slate-200 text-primary shadow-xl transition-all duration-300",
+                        "w-14 h-14 rounded-full p-0 shadow-xl transition-all duration-300",
+                        "bg-white/95 text-primary border border-slate-200",
+                        "dark:bg-slate-800 dark:text-white dark:border-slate-700",
                         videoPreview ? "hover:bg-primary hover:text-white" : "",
-                        isPlaying && !videoPreview && "bg-primary text-white scale-110 shadow-primary/20"
+                        isPlaying && !videoPreview && "bg-primary text-white scale-110 shadow-primary/20 dark:bg-primary"
                         )}
                     >
                         {videoPreview ? (
@@ -253,7 +313,7 @@ const MusicCard = memo(({
                     disabled={alreadyPurchased}
                     className={cn(
                     "w-full h-10 rounded-xl font-bold uppercase tracking-widest text-[10px] gap-2 shadow-lg border-none transition-all",
-                    alreadyPurchased ? "bg-slate-200 text-slate-500 cursor-default hover:bg-slate-200" : inCart ? "bg-primary text-white shadow-primary/20" : "bg-primary/90 text-white hover:bg-primary"
+                    alreadyPurchased ? "bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-600" : inCart ? "bg-primary text-white" : "bg-primary/90 text-white hover:bg-primary"
                     )}
                 >
                     {alreadyPurchased ? "Purchased" : inCart ? "In Cart" : <><ShoppingCart className="w-3.5 h-3.5" /> Add to Cart</>}
@@ -263,49 +323,43 @@ const MusicCard = memo(({
             </div>
         </div>
 
-        {/* DETAILS SECTION */}
         <div className="flex flex-col flex-1 p-4 pt-2 relative z-10 pointer-events-none">
-          {/* Title Area */}
           <div className="mb-auto">
             <h3 
-                className="font-bold text-[15px] leading-tight tracking-tight text-slate-900 group-hover:text-primary transition-colors duration-300 line-clamp-2"
+                className="font-bold text-[15px] leading-tight tracking-tight transition-colors duration-300 line-clamp-2 text-slate-900 dark:text-slate-50 group-hover:text-primary dark:group-hover:text-primary"
                 title={title}
             >
               {title}
             </h3>
           </div>
 
-          {/* Price & Rating Area */}
-          <div className="flex items-end justify-between pt-4 mt-2 border-t border-slate-100/50">
+          <div className="flex items-end justify-between pt-4 mt-2 border-t border-slate-100/50 dark:border-slate-800/50">
             <div className="flex flex-col gap-0.5">
               
-              {/* Original Price & Discount Row */}
               {hasDiscount && (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] text-slate-400 line-through font-semibold">
+                  <span className="text-[11px] font-semibold line-through text-slate-400 dark:text-slate-500">
                     ₹{originalPrice}
                   </span>
                   {discount > 0 && (
-                    <Badge className="bg-rose-500/10 text-rose-600 hover:bg-rose-500/10 border-none px-1 py-0 shadow-none text-[9px] font-black uppercase rounded-sm">
+                    <Badge className="bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 border-none px-1 py-0 shadow-none text-[9px] font-black uppercase rounded-sm">
                       {discount}% OFF
                     </Badge>
                   )}
                 </div>
               )}
               
-              {/* Final Price Row */}
               <div className="flex items-baseline gap-1">
-                <span className="text-xl font-black text-slate-900 tracking-tighter leading-none italic">
+                <span className="text-xl font-black tracking-tighter leading-none italic text-slate-900 dark:text-slate-50">
                   ₹{price}
                 </span>
               </div>
 
             </div>
             
-            {/* Rating */}
             {rating && rating > 0 ? (
-              <div className="flex items-center justify-center gap-1 bg-slate-50 px-2 py-1 rounded-md border border-slate-200/60">
-                <span className="text-[10px] font-black text-slate-800 leading-none mt-[1px]">{rating.toFixed(1)}</span>
+              <div className="flex items-center justify-center gap-1 px-2 py-1 rounded-md border bg-slate-50 border-slate-200/60 dark:bg-slate-800 dark:border-slate-700">
+                <span className="text-[10px] font-black leading-none mt-[1px] text-slate-800 dark:text-slate-200">{rating.toFixed(1)}</span>
                 <Star className="w-[10px] h-[10px] fill-amber-400 text-amber-400" />
               </div>
             ) : null}
